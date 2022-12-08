@@ -29,6 +29,14 @@ the default value
 
 This package presents a solution to both of these problems.
 
+## Installation
+
+This package is on PyPI for Python >=3.8:
+
+```sh
+pip install warned-dataclasses
+```
+
 ## Usage
 
 Using this package is simple. The following (contrived) example should 
