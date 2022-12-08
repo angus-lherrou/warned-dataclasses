@@ -12,182 +12,207 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import inspect
 import logging
-from dataclasses import Field, MISSING
-# sorry, PyCharm stubs! sorry, dataclasses devs!
-from dataclasses import _process_class, _FIELDS
-
-from typing import Dict, List, Callable, Optional
+import sys
 
 from collections import defaultdict
+from typing import (
+    Callable,
+    Protocol,
+    get_type_hints,
+    Type,
+    overload,
+    Union,
+    cast,
+    Optional,
+    ClassVar,
+    TypeVar,
+)
+from dataclasses import Field, is_dataclass
 
+if sys.version_info >= (3, 9):
+    from typing import Annotated as Warned
+else:
+    from typing_extensions import Annotated as Warned
 
-class DeferredWarning:
-    def __init__(
-        self, condition: str, deferred_message: Callable[[str], str], error=False
-    ):
-        print("initialized")
-        self.condition = condition
-        self.deferred_message = deferred_message
-        self.satisfied = False
-        self.error = error
-        self.message = None
-
-    def satisfy(self):
-        self.satisfied = True
-
-    def supply_parameter(self, param: str):
-        self.message = self.deferred_message(param)
-
-    def invoke(self):
-        if not self.satisfied:
-            if self.message is None:
-                raise ValueError("didn't supply parameter!")
-            if self.error:
-                raise ConditionalParameterError(self.message)
-            else:
-                logger.warning(self.message)
-
-
-#: The dictionary of deferred warnings, from the name of
-#: a condition to the list of deferred warnings.
-DEFERRED_WARNINGS: Dict[str, List[DeferredWarning]] = defaultdict(list)
-
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 logger = logging.getLogger(__name__)
+
+_AnnotatedAlias: TypeAlias = type(Warned[None, None])  # type: ignore
+
+
+__all__ = ["ConditionalParameterError", "Warned", "satisfy", "invoke", "warned"]
 
 
 class ConditionalParameterError(Exception):
     pass
 
 
-def satisfy(key: str) -> None:
-    """
-    Satisfies all deferred warnings for a given key.
+class _DeferredWarningFactory:
+    def __init__(
+        self,
+        condition: str,
+        message: str,
+        error=False,
+    ):
+        self.condition = condition
+        self.message = message
+        self.error = error
 
-    :param key: the name of the condition
-    :return: None
-    """
-    if key not in DEFERRED_WARNINGS:
-        raise KeyError(
-            f'Condition "{key}" has not been declared and could not be disarmed.'
-        )
-    for deferred_warning in DEFERRED_WARNINGS[key]:
-        deferred_warning.satisfy()
-
-
-def invoke(key: str) -> None:
-    """
-    Invokes all armed deferred warnings for a given condition.
-
-    :param str key: the name of the condition
-    :return: None
-    """
-    if key not in DEFERRED_WARNINGS:
-        raise KeyError(
-            f'Condition "{key}" has not been declared and could not be invoked'
-        )
-    for deferred_warning in DEFERRED_WARNINGS[key]:
-        deferred_warning.invoke()
+    def generate(self):
+        return _DeferredWarning(self.condition, self.message, self.error)
 
 
-def invoke_all() -> None:
-    """
-    Invokes all armed deferred warnings for all conditions.
+class _DeferredWarning:
+    def __init__(
+        self,
+        condition: str,
+        message: str,
+        error=False,
+    ):
+        self.condition = condition
+        self.satisfied = False
+        self.error = error
+        self.message = message
 
-    :return: None
-    """
-    for key in DEFERRED_WARNINGS:
-        invoke(key)
+    def satisfy(self):
+        self.satisfied = True
+
+    def invoke(self):
+        if not self.satisfied:
+            if self.error:
+                raise ConditionalParameterError(self.message)
+            else:
+                logger.warning(self.message)
 
 
-"""
-dataclasses drop-in replacements here
-"""
+class _Dataclass(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, Field]]
+    __dataclass_params__: ClassVar
 
 
-def dataclass(
-    cls=None,
+class _WarnedDataclass(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, Field]]
+    __dataclass_params__: ClassVar
+    __deferred_warnings__: dict[str, dict[str, _DeferredWarning]]
+
+    def __inner_init__(self, *args, **kwargs) -> None:
+        ...
+
+
+def _patch_init_method(
+    cls, warnings: dict[str, dict[str, _DeferredWarningFactory]]
+) -> Type[_WarnedDataclass]:
+    cls = cast(Type[_WarnedDataclass], cls)
+    cls.__inner_init__ = cls.__init__  # type: ignore
+
+    def __init__(self_: _WarnedDataclass, *args, **kwargs):
+        self_.__deferred_warnings__ = {
+            condition: {name: factory.generate() for name, factory in factories.items()}
+            for condition, factories in warnings.items()
+        }
+
+        type_hints = get_type_hints(self_, include_extras=True)
+
+        bound_arguments = inspect.signature(self_.__inner_init__).bind(*args, **kwargs)
+
+        for name, field_obj in self_.__dataclass_fields__.items():
+            if not field_obj.init:
+                # not an init parameter; ignore
+                continue
+            if not isinstance(type_hints[name], _AnnotatedAlias):
+                # not Annotated; ignore
+                continue
+
+            if name not in bound_arguments.arguments:
+                # no explicit value passed; satisfy warning
+                condition: str = type_hints[name].__metadata__[0]
+                self_.__deferred_warnings__[condition][name].satisfy()
+            # else: leave warning unsatisfied
+
+        self_.__inner_init__(*args, **kwargs)
+
+    __init__.__doc__ = cls.__init__.__doc__
+    __init__.__annotations__ = cls.__init__.__annotations__
+
+    cls.__init__ = __init__  # type: ignore
+
+    return cls
+
+
+_T = TypeVar("_T")
+
+
+@overload
+def warned(
+    cls: Type[_T],
+    /,
+) -> Type[_T]:
+    ...
+
+
+@overload
+def warned(
+    *,
+    error_on_invoke: bool = False,
+) -> Callable[[Type[_T]], Type[_T]]:
+    ...
+
+
+def warned(
+    cls: Optional[Type[_T]] = None,
     /,
     *,
-    init=True,
-    repr=True,
-    eq=True,
-    order=False,
-    unsafe_hash=False,
-    frozen=False,
-):
-    """Returns the same class as was passed in, with dunder methods
-    added based on the fields defined in the class.
-
-    Examines PEP 526 __annotations__ to determine fields.
-
-    If init is true, an __init__() method is added to the class. If
-    repr is true, a __repr__() method is added. If order is true, rich
-    comparison dunder methods are added. If unsafe_hash is true, a
-    __hash__() method function is added. If frozen is true, fields may
-    not be assigned to after instance creation.
-    """
-
-    def wrap(cls):
-        return _warned_process_class(cls, init, repr, eq, order, unsafe_hash, frozen)
-
-    # See if we're being called as @dataclass or @dataclass().
-    if cls is None:
-        # We're called with parens.
-        return wrap
-
-    # We're called as @dataclass without parens.
-    return wrap(cls)
-
-
-def _warned_process_class(cls, init, repr, eq, order, unsafe_hash, frozen):
-    cls = _process_class(cls, init, repr, eq, order, unsafe_hash, frozen)
-    for field in getattr(cls, _FIELDS):
-        deferred_warning: DeferredWarning = field._deferred_warning
-        deferred_warning.supply_parameter(field.name)
-        DEFERRED_WARNINGS[deferred_warning.condition].append(deferred_warning)
-
-
-class WarnedField(Field):
-    __slots__ = (
-        *Field.__slots__,
-        "_deferred_warning",
-    )
-
-    def __init__(self, deferred_warning: DeferredWarning, *args, **kwargs):
-        super(WarnedField, self).__init__(*args, **kwargs)
-        self._deferred_warning = deferred_warning
-
-
-def field(
-    *,
-    condition: Optional[str] = None,
     error_on_invoke: bool = False,
-    default=MISSING,
-    default_factory=MISSING,
-    init=True,
-    repr=True,
-    hash=None,
-    compare=True,
-    metadata=None,
-):
+) -> Union[Type[_T], Callable[[Type[_T]], Type[_T]]]:
+    def generate_warnings(cls_: Type[_T]) -> Type[_T]:
+        if not is_dataclass(cls_):
+            raise ValueError("@warned should only be used with a dataclass.")
 
-    if condition is not None:
-        deferred_warning = DeferredWarning(
-            condition,
-            lambda parameter: (
-                f"Value provided for --{parameter} but "
-                f'required condition "{condition}" not met.'
-            ),
-            error=error_on_invoke,
+        cls_annotations = cls_.__annotations__
+
+        warnings: dict[str, dict[str, _DeferredWarningFactory]] = defaultdict(dict)
+
+        for name, annotation in cls_annotations.items():
+            if not isinstance(annotation, _AnnotatedAlias):
+                continue
+            # add to triggers
+            condition: str = annotation.__metadata__[0]
+            warning = _DeferredWarningFactory(
+                condition,
+                (
+                    f'a value was provided for the attribute "{name}" but '
+                    f'the required condition "{condition}" was not met.'
+                ),
+                error_on_invoke,
+            )
+            warnings[condition][name] = warning
+
+        return cast(
+            Type[_T], _patch_init_method(cast(Type[_Dataclass], cls_), warnings)
         )
-    else:
-        deferred_warning = None
 
-    # Code below this line is to be kept in sync with Python's dataclasses code
-    if default is not MISSING and default_factory is not MISSING:
-        raise ValueError("cannot specify both default and default_factory")
-    return WarnedField(
-        deferred_warning, default, default_factory, init, repr, hash, compare, metadata
-    )
+    if cls is None:
+        # invoked as @warned()
+        return generate_warnings
+    # invoked as @warned
+    return generate_warnings(cls)
+
+
+def satisfy(obj, condition: str):
+    for warning in (
+        cast(_WarnedDataclass, obj).__deferred_warnings__[condition].values()
+    ):
+        warning.satisfy()
+
+
+def invoke(obj, condition: str):
+    for warning in (
+        cast(_WarnedDataclass, obj).__deferred_warnings__[condition].values()
+    ):
+        warning.invoke()

@@ -4,5 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "warned-dataclasses"
+readme = "README.md"
+authors = [
+    { name = "Angus L'Herrou", email = "contact@lru.dev" }
+]
 version = "0.1.0"
-dependencies = []
+requires-python = ">=3.8"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    'typing-extensions; python_version<"3.10"',
+]
