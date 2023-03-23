@@ -1,5 +1,7 @@
 # warned-dataclasses
 
+[![pypi](https://img.shields.io/pypi/v/warned-dataclasses)](https://pypi.org/project/warned-dataclasses)
+
 This package adds functionality to Python's `dataclasses` feature to 
 emit a warning or raise an exception if an explicit value for an 
 attribute was used to initialize a dataclass but some user-specified 
