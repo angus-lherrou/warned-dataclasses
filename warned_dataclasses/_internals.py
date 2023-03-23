@@ -30,11 +30,13 @@ class DeferredWarning:
         self,
         cond: CONDITION_CLASS,
         message: str,
-        error=False,
+        error: bool,
+        satisfy_on_warn: bool,
     ):
         self.cond = cond
         self.satisfied = False
         self.error = error
+        self.satisfy_on_warn = satisfy_on_warn
         self.message = message
 
     def satisfy_warning(self):
@@ -42,6 +44,8 @@ class DeferredWarning:
 
     def invoke_warning(self):
         if not self.satisfied:
+            if self.satisfy_on_warn:
+                self.satisfy_warning()
             if self.error:
                 raise ConditionalParameterError(self.message)
             else:
@@ -56,14 +60,18 @@ class DeferredWarningFactory:
         self,
         cond: CONDITION_CLASS,
         message: str,
-        error=False,
+        error: bool,
+        satisfy_on_warn: bool,
     ):
         self.cond = cond
         self.message = message
         self.error = error
+        self.satisfy_on_warn = satisfy_on_warn
 
     def generate(self):
-        return DeferredWarning(self.cond, self.message, self.error)
+        return DeferredWarning(
+            self.cond, self.message, self.error, self.satisfy_on_warn
+        )
 
 
 class Dataclass(Protocol):

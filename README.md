@@ -122,7 +122,20 @@ if __name__ == '__main__':
 
 ## Advanced Usage
 
-### 1. Multiple warned dataclasses and `ConditionSet`
+### 1. Decorator options
+
+* By default, a warned dataclass will emit a warning to the current `logging` 
+  logger. To raise an exception instead, use `@warned(error=True)`.
+
+* By default, a warned dataclass will only emit a warning once for each
+  condition; future calls to `warn_for_condition` or `warn_all` will
+  treat that condition as satisfied. To disable this behavior and emit
+  a warning every time it is invoked, use `@warned(satisfy_on_warn=False)`
+
+* A plain `@warned` can be used with or without parentheses.
+
+
+### 2. Multiple warned dataclasses and `ConditionSet`
 
 If your code uses multiple warned dataclasses that share some conditions,
 the methods illustrated above become clunky, as you end up having to call
@@ -176,10 +189,3 @@ def main():
     warn_all(conditions)
 
 ```
-
-## Other usage notes
-
-By default, `@warned` will emit a warning to the current `logging` 
-logger. To raise an exception instead, use `@warned(error=True)`.
-
-A plain `@warned` can be used with or without parentheses.

@@ -23,5 +23,5 @@ __all__ = [
     "warn_all",
     "warn_for_condition",
     "warned",
-    "satisfy"
+    "satisfy",
 ]

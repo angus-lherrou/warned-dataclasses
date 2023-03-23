@@ -24,31 +24,59 @@ from warned_dataclasses import (
     ConditionalParameterError,
     ConditionSet,
     warn_all,
-    satisfy
+    satisfy,
 )
 
 
-@warned(error=True)
+@warned(error=True, satisfy_on_warn=False)
 @dataclass
 class Foo:
     bar: int = field(default=4)
-    baz: Warned[int, "dflt"] = field(default=5)
-    qux: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+    baz: Warned[int, "baz"] = field(default=5)
+    qux: Warned[int, "qux"] = field(default_factory=lambda: 10)
 
 
 @warned(error=True)
 @dataclass
 class Bar:
     bar: int = field(default=4)
-    baz: Warned[int, "dflt"] = field(default=5)
-    qux: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+    baz: Warned[int, "baz"] = field(default=5)
+    qux: Warned[int, "qux"] = field(default_factory=lambda: 10)
 
 
 @warned(error=True)
 @dataclass
 class Baz:
-    name: Warned[str, "dflt"] = field(default="sam I am")
+    name: Warned[str, "baz"] = field(default="sam I am")
     ident: Warned[str, "ident"] = field(default="abcd1234")
+
+
+def test_satisfy_on_warn():
+    bar = Bar(baz=3)
+
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(bar, "baz")
+
+    warn_for_condition(bar, "baz")
+
+
+def test_satisfy_on_warn_warn_all():
+    bar = Bar(baz=3)
+
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(bar, "baz")
+
+    warn_all(bar)
+
+
+def test_no_satisfy_on_warn():
+    foo = Foo(baz=3)
+
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(foo, "baz")
+
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(foo, "baz")
 
 
 def test_condition_set_ignore_not_present_in_some():
@@ -66,10 +94,10 @@ def test_condition_set_error_on_not_present_in_any():
     baz = Baz(ident="abc")
     conditions = ConditionSet(bar, baz)
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError):
         conditions.satisfy("nonexistent")
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError):
         conditions.warn_for_condition("nonexistent2")
 
 
@@ -90,7 +118,7 @@ def test_condition_set_satisfy():
     baz = Baz(name="Stephen", ident="abc")
     conditions = ConditionSet(bar, baz)
 
-    conditions.satisfy("dflt")
+    conditions.satisfy("baz")
     conditions.satisfy("ident")
 
     conditions.warn_all()
@@ -101,7 +129,7 @@ def test_condition_set_satisfy_functional():
     baz = Baz(name="Stephen", ident="abc")
     conditions = ConditionSet(bar, baz)
 
-    satisfy(conditions, "dflt")
+    satisfy(conditions, "baz")
     satisfy(conditions, "ident")
 
     warn_all(conditions)
@@ -112,7 +140,7 @@ def test_condition_set_warn_for_condition():
     baz = Baz(name="Stephen")
     conditions = ConditionSet(bar, baz)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        conditions.warn_for_condition("dflt")
+        conditions.warn_for_condition("baz")
     assert len(exc_info.value.args[0].strip().split("\n")) == 3
 
 
@@ -121,11 +149,8 @@ def test_condition_set_warn_for_condition_functional():
     baz = Baz(name="Stephen")
     conditions = ConditionSet(bar, baz)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        warn_for_condition(conditions, "dflt")
-    with pytest.raises(ConditionalParameterError) as exc_info_2:
-        conditions.warn_for_condition("dflt")
+        warn_for_condition(conditions, "baz")
     assert len(exc_info.value.args[0].strip().split("\n")) == 3
-    assert exc_info.value.args[0] == exc_info_2.value.args[0]
 
 
 def test_condition_set_warn_all():
@@ -143,23 +168,20 @@ def test_condition_set_warn_all_functional():
     conditions = ConditionSet(bar, baz)
     with pytest.raises(ConditionalParameterError) as exc_info:
         warn_all(conditions)
-    with pytest.raises(ConditionalParameterError) as exc_info_2:
-        conditions.warn_all()
     assert len(exc_info.value.args[0].strip().split("\n")) == 4
-    assert exc_info.value.args[0] == exc_info_2.value.args[0]
 
 
 def test_ignores_other_annotations():
     @warned(error=True)
     @dataclass
     class Qux:
-        one: Warned[int, "dflt"] = field(default=5)
+        one: Warned[int, "baz"] = field(default=5)
         two: Annotated[int, {"metadata": "something irrelevant"}] = field(default=0)
 
     qux = Qux(3, 3)
 
     with pytest.raises(ConditionalParameterError) as exc_info:
-        warn_for_condition(qux, "dflt")
+        warn_for_condition(qux, "baz")
 
     assert len(exc_info.value.args[0].strip().split("\n")) == 2
 
@@ -169,16 +191,16 @@ def test_no_bleed():
     bar = Bar(baz=4)
     conditions = ConditionSet(bar)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        conditions.warn_for_condition("dflt")
+        conditions.warn_for_condition("baz")
     assert len(exc_info.value.args[0].strip().split("\n")) == 2
 
 
-@pytest.fixture(params=["dflt", "dflt_fac"])
+@pytest.fixture(params=["baz", "qux"])
 def condition_var(request):
     return request.param
 
 
-@pytest.fixture(params=[("dflt", "baz", 5), ("dflt_fac", "qux", 10)])
+@pytest.fixture(params=[("baz", "baz", 5), ("qux", "qux", 10)])
 def condition_attr_default(request):
     return request.param
 
@@ -234,7 +256,7 @@ def test_warn_all_collects_some():
 def test_fails_on_positional():
     foo = Foo(3, 6)
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(foo, "dflt")
+        warn_for_condition(foo, "baz")
 
 
 def test_fails_on_kwarg(condition_attr_default):

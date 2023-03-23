@@ -26,8 +26,12 @@ from typing import (
     Generic,
 )
 
-from ._internals import _collect_warnings, _collect_conditions, _collect_all_warnings, \
-    _satisfy
+from ._internals import (
+    _collect_warnings,
+    _collect_conditions,
+    _collect_all_warnings,
+    _satisfy,
+)
 
 if sys.version_info >= (3, 9):
     pass
@@ -47,7 +51,9 @@ class ConditionSet(Generic[_T]):
                     "ConditionSet should only be used with dataclass objects."
                 )
 
-        self.objects: Tuple[WarnedDataclass, ...] = cast(Tuple[WarnedDataclass, ...], dclses)
+        self.objects: Tuple[WarnedDataclass, ...] = cast(
+            Tuple[WarnedDataclass, ...], dclses
+        )
         self.conditions: Set[CONDITION_CLASS] = _collect_conditions(self.objects)
 
     def _collect_warnings(
@@ -91,6 +97,7 @@ def warned(
 def warned(
     *,
     error: bool = False,
+    satisfy_on_warn: bool = True,
 ) -> Callable[[Type[_T]], Type[_T]]:
     ...
 
@@ -100,6 +107,7 @@ def warned(
     /,
     *,
     error: bool = False,
+    satisfy_on_warn: bool = True,
 ) -> Union[Type[_T], Callable[[Type[_T]], Type[_T]]]:
     def generate_warnings(cls_: Type[_T]) -> Type[_T]:
         if not is_dataclass(cls_):
@@ -128,6 +136,7 @@ def warned(
                     f'the required condition "{cond}" was not met.'
                 ),
                 error,
+                satisfy_on_warn,
             )
             warnings[cond][name] = warning
 
