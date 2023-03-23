@@ -12,16 +12,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing_extensions import Annotated as Warned
-from .main import warned, warn_for_condition, warn_all, ConditionSet, satisfy
-from .common import ConditionalParameterError
+from typing import List
+from typing_extensions import TypeAlias
 
-__all__ = [
-    "ConditionSet",
-    "ConditionalParameterError",
-    "Warned",
-    "warn_all",
-    "warn_for_condition",
-    "warned",
-    "satisfy"
-]
+
+CONDITION_CLASS: TypeAlias = str
+
+
+class ConditionalParameterError(Exception):
+    pass
+
+    @classmethod
+    def from_list(
+        cls, errs: List["ConditionalParameterError"]
+    ) -> "ConditionalParameterError":
+        msg = "\n".join([e.args[0] for e in errs])
+        return cls(f"The following attributes had unmet conditions:\n{msg}")
