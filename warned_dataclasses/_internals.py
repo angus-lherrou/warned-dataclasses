@@ -89,7 +89,7 @@ class WarnedDataclass(Protocol):
 
 def patch_init_method(
     cls,
-    warnings: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
+    warning_dict: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
 ) -> Type[WarnedDataclass]:
     # cls = cast(Type[_WarnedDataclass], cls)
     # cls.__inner_init__ = cls.__init__  # type: ignore
@@ -107,7 +107,7 @@ def patch_init_method(
 
             self.__deferred_warnings__ = {
                 cond: {name: factory.generate() for name, factory in factories.items()}
-                for cond, factories in warnings.items()
+                for cond, factories in warning_dict.items()
             }
 
             # satisfy warnings for implicit attributes
