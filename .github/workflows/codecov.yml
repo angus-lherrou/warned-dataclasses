@@ -5,11 +5,13 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Test python API
+    name: Run code coverage
     steps:
     - uses: actions/checkout@v1
-    - name: Install requirements
-      run: pip install -e . && pip install -r dev-requirements.txt
+    - name: Install dev requirements
+      run: pip install -r dev-requirements.txt
+    - name: Install package
+      run: pip install -e .
     - name: Run tests and collect coverage
       run: pytest --cov .
     - name: Upload coverage reports to Codecov
