@@ -33,40 +33,48 @@ from warned_dataclasses.common import ConditionalParameterWarning
 @warned(error=False, satisfy_on_warn=False)
 @dataclass
 class WarningNoSatisfy:
-    foo: int = field(default=4)
-    bar: Warned[int, "bar"] = field(default=5)
-    baz: Warned[int, "baz"] = field(default_factory=lambda: 10)
+    not_warned: int = field(default=4)
+    dflt: Warned[int, "dflt"] = field(default=5)
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
 @warned(error=False, satisfy_on_warn=True)
 @dataclass
 class WarningSatisfy:
-    foo: int = field(default=4)
-    bar: Warned[int, "bar"] = field(default=5)
-    baz: Warned[int, "baz"] = field(default_factory=lambda: 10)
+    not_warned: int = field(default=4)
+    dflt: Warned[int, "dflt"] = field(default=5)
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
 @warned(error=True, satisfy_on_warn=False)
 @dataclass
 class ErrorNoSatisfy:
-    foo: int = field(default=4)
-    bar: Warned[int, "bar"] = field(default=5)
-    baz: Warned[int, "baz"] = field(default_factory=lambda: 10)
+    not_warned: int = field(default=4)
+    dflt: Warned[int, "dflt"] = field(default=5)
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
 @warned(error=True)
 @dataclass
 class ErrorSatisfy:
-    foo: int = field(default=4)
-    bar: Warned[int, "bar"] = field(default=5)
-    baz: Warned[int, "baz"] = field(default_factory=lambda: 10)
+    not_warned: int = field(default=4)
+    dflt: Warned[int, "dflt"] = field(default=5)
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
 @warned(error=True)
 @dataclass
 class ErrorSatisfy2:
-    foo: Warned[str, "foo"] = field(default="abcd1234")
-    bar: Warned[str, "bar"] = field(default="sam I am")
+    not_warned: Warned[str, "not_warned"] = field(default="abcd1234")
+    dflt: Warned[str, "dflt"] = field(default="sam I am")
+
+
+@warned(error=True, warn_on_default=False)
+@dataclass
+class ErrorNoWarnOnDefault:
+    not_warned: int = field(default=4)
+    dflt: Warned[int, "dflt"] = field(default=5)
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
 def test_no_parens():
@@ -83,39 +91,39 @@ def test_no_parens():
 
 
 def test_satisfy_on_warn_error():
-    es = ErrorSatisfy(bar=3)
+    es = ErrorSatisfy(dflt=3)
 
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(es, "bar")
+        warn_for_condition(es, "dflt")
 
-    warn_for_condition(es, "bar")
+    warn_for_condition(es, "dflt")
 
 
 def test_satisfy_on_warn_warning():
-    ws = WarningSatisfy(bar=3)
+    ws = WarningSatisfy(dflt=3)
 
     with pytest.warns(ConditionalParameterWarning):
-        warn_for_condition(ws, "bar")
+        warn_for_condition(ws, "dflt")
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        warn_for_condition(ws, "bar")
+        warn_for_condition(ws, "dflt")
 
 
 def test_satisfy_on_warn_warn_all_error():
-    es = ErrorSatisfy(bar=3)
+    es = ErrorSatisfy(dflt=3)
 
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(es, "bar")
+        warn_for_condition(es, "dflt")
 
     warn_all(es)
 
 
 def test_satisfy_on_warn_warn_all_warning():
-    es = ErrorSatisfy(bar=3)
+    es = ErrorSatisfy(dflt=3)
 
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(es, "bar")
+        warn_for_condition(es, "dflt")
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
@@ -123,38 +131,38 @@ def test_satisfy_on_warn_warn_all_warning():
 
 
 def test_no_satisfy_on_warn_error():
-    ens = ErrorNoSatisfy(bar=3)
+    ens = ErrorNoSatisfy(dflt=3)
 
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(ens, "bar")
+        warn_for_condition(ens, "dflt")
 
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(ens, "bar")
+        warn_for_condition(ens, "dflt")
 
 
 def test_no_satisfy_on_warn_warning():
-    wns = WarningNoSatisfy(bar=3)
+    wns = WarningNoSatisfy(dflt=3)
 
     with pytest.warns(ConditionalParameterWarning):
-        warn_for_condition(wns, "bar")
+        warn_for_condition(wns, "dflt")
 
     with pytest.warns(ConditionalParameterWarning):
-        warn_for_condition(wns, "bar")
+        warn_for_condition(wns, "dflt")
 
 
 def test_condition_set_ignore_not_present_in_some():
     es = ErrorSatisfy()
-    es2 = ErrorSatisfy2(foo="abc")
+    es2 = ErrorSatisfy2(not_warned="abc")
     conditions = ConditionSet(es, es2)
 
-    conditions.satisfy("foo")
+    conditions.satisfy("not_warned")
 
     conditions.warn_all()
 
 
 def test_condition_set_error_on_not_present_in_any():
     es = ErrorSatisfy()
-    es2 = ErrorSatisfy2(foo="abc")
+    es2 = ErrorSatisfy2(not_warned="abc")
     conditions = ConditionSet(es, es2)
 
     with pytest.raises(ValueError):
@@ -166,7 +174,7 @@ def test_condition_set_error_on_not_present_in_any():
 
 def test_condition_set_error_on_not_present_in_any_functional():
     es = ErrorSatisfy()
-    es2 = ErrorSatisfy2(foo="abc")
+    es2 = ErrorSatisfy2(not_warned="abc")
     conditions = ConditionSet(es, es2)
 
     with pytest.raises(ValueError) as exc_info:
@@ -177,48 +185,48 @@ def test_condition_set_error_on_not_present_in_any_functional():
 
 
 def test_condition_set_satisfy():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(foo="abc", bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(not_warned="abc", dflt="Stephen")
     conditions = ConditionSet(es, es2)
 
-    conditions.satisfy("bar")
-    conditions.satisfy("foo")
+    conditions.satisfy("dflt")
+    conditions.satisfy("not_warned")
 
     conditions.warn_all()
 
 
 def test_condition_set_satisfy_functional():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(foo="abc", bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(not_warned="abc", dflt="Stephen")
     conditions = ConditionSet(es, es2)
 
-    satisfy(conditions, "bar")
-    satisfy(conditions, "foo")
+    satisfy(conditions, "dflt")
+    satisfy(conditions, "not_warned")
 
     warn_all(conditions)
 
 
 def test_condition_set_warn_for_condition():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(dflt="Stephen")
     conditions = ConditionSet(es, es2)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        conditions.warn_for_condition("bar")
+        conditions.warn_for_condition("dflt")
     assert len(exc_info.value.args[0].strip().split("\n")) == 3
 
 
 def test_condition_set_warn_for_condition_functional():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(dflt="Stephen")
     conditions = ConditionSet(es, es2)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        warn_for_condition(conditions, "bar")
+        warn_for_condition(conditions, "dflt")
     assert len(exc_info.value.args[0].strip().split("\n")) == 3
 
 
 def test_condition_set_warn_all():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(foo="abc1", bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(not_warned="abc1", dflt="Stephen")
     conditions = ConditionSet(es, es2)
     with pytest.raises(ConditionalParameterError) as exc_info:
         conditions.warn_all()
@@ -226,8 +234,8 @@ def test_condition_set_warn_all():
 
 
 def test_condition_set_warn_all_functional():
-    es = ErrorSatisfy(bar=3)
-    es2 = ErrorSatisfy2(foo="abc1", bar="Stephen")
+    es = ErrorSatisfy(dflt=3)
+    es2 = ErrorSatisfy2(not_warned="abc1", dflt="Stephen")
     conditions = ConditionSet(es, es2)
     with pytest.raises(ConditionalParameterError) as exc_info:
         warn_all(conditions)
@@ -238,32 +246,32 @@ def test_ignores_other_annotations():
     @warned(error=True)
     @dataclass
     class Qux:
-        one: Warned[int, "bar"] = field(default=5)
+        one: Warned[int, "dflt"] = field(default=5)
         two: Annotated[int, {"metadata": "something irrelevant"}] = field(default=0)
 
-    baz = Qux(3, 3)
+    dflt_fac = Qux(3, 3)
 
     with pytest.raises(ConditionalParameterError) as exc_info:
-        warn_for_condition(baz, "bar")
+        warn_for_condition(dflt_fac, "dflt")
 
     assert len(exc_info.value.args[0].strip().split("\n")) == 2
 
 
 def test_no_bleed():
-    _ = ErrorNoSatisfy(bar=4)
-    es = ErrorSatisfy(bar=4)
+    _ = ErrorNoSatisfy(dflt=4)
+    es = ErrorSatisfy(dflt=4)
     conditions = ConditionSet(es)
     with pytest.raises(ConditionalParameterError) as exc_info:
-        conditions.warn_for_condition("bar")
+        conditions.warn_for_condition("dflt")
     assert len(exc_info.value.args[0].strip().split("\n")) == 2
 
 
-@pytest.fixture(params=["bar", "baz"])
+@pytest.fixture(params=["dflt", "dflt_fac"])
 def condition_var(request):
     return request.param
 
 
-@pytest.fixture(params=[("bar", "bar", 5), ("baz", "baz", 10)])
+@pytest.fixture(params=[("dflt", "dflt", 5), ("dflt_fac", "dflt_fac", 10)])
 def condition_attr_default(request):
     return request.param
 
@@ -274,7 +282,7 @@ def test_ok_on_default_positional(condition_var):
 
 
 def test_ok_on_default_kwarg(condition_var):
-    ens = ErrorNoSatisfy(foo=3)
+    ens = ErrorNoSatisfy(not_warned=3)
     warn_for_condition(ens, condition_var)
 
 
@@ -297,27 +305,27 @@ def test_ok_on_warn_all_implicit():
 
 
 def test_fails_on_warn_all():
-    ens = ErrorNoSatisfy(3, bar=4)
+    ens = ErrorNoSatisfy(3, dflt=4)
     with pytest.raises(ConditionalParameterError):
         warn_all(ens)
 
 
 def test_warn_all_collects_all_error():
-    ens = ErrorNoSatisfy(3, bar=4, baz=9)
+    ens = ErrorNoSatisfy(3, dflt=4, dflt_fac=9)
     with pytest.raises(ConditionalParameterError) as exc_info:
         warn_all(ens)
     assert len(exc_info.value.args[0].strip().split("\n")) == 3
 
 
 def test_warn_all_collects_all_warning():
-    wns = WarningNoSatisfy(3, bar=4, baz=9)
+    wns = WarningNoSatisfy(3, dflt=4, dflt_fac=9)
     with pytest.warns(ConditionalParameterWarning) as w:
         warn_all(wns)
     assert len(w) == 2
 
 
 def test_warn_all_collects_some():
-    ens = ErrorNoSatisfy(3, baz=9)
+    ens = ErrorNoSatisfy(3, dflt_fac=9)
     with pytest.raises(ConditionalParameterError) as exc_info:
         warn_all(ens)
     assert len(exc_info.value.args[0].strip().split("\n")) == 2
@@ -326,7 +334,7 @@ def test_warn_all_collects_some():
 def test_fails_on_positional():
     ens = ErrorNoSatisfy(3, 6)
     with pytest.raises(ConditionalParameterError):
-        warn_for_condition(ens, "bar")
+        warn_for_condition(ens, "dflt")
 
 
 def test_fails_on_kwarg(condition_attr_default):
@@ -341,3 +349,22 @@ def test_fails_on_equal_to_default(condition_attr_default):
     ens = ErrorNoSatisfy(3, **{attr_name: default})
     with pytest.raises(ConditionalParameterError):
         warn_for_condition(ens, condition)
+
+
+def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwarn):
+    condition, attr_name, default = condition_attr_default
+    enwod = ErrorNoWarnOnDefault(3, **{attr_name: default})
+    if len(recwarn) == 1:
+        assert attr_name == 'dflt_fac'
+        w = recwarn.pop(UserWarning)
+        if isinstance(w.message, UserWarning):
+            msg = w.message.args[0]
+        else:
+            msg = w
+        assert "pure function" in msg
+    elif len(recwarn) == 0:
+        assert attr_name == 'dflt'
+    else:
+        assert False, "too many warnings emitted"
+    warn_for_condition(enwod, condition)
+

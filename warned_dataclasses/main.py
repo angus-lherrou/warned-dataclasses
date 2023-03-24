@@ -98,6 +98,7 @@ def warned(
     *,
     error: bool = False,
     satisfy_on_warn: bool = True,
+    warn_on_default: bool = True,
 ) -> Callable[[Type[_T]], Type[_T]]:
     ...
 
@@ -108,6 +109,7 @@ def warned(
     *,
     error: bool = False,
     satisfy_on_warn: bool = True,
+    warn_on_default: bool = True,
 ) -> Union[Type[_T], Callable[[Type[_T]], Type[_T]]]:
     def generate_warnings(cls_: Type[_T]) -> Type[_T]:
         if not is_dataclass(cls_):
@@ -142,7 +144,11 @@ def warned(
 
         new_cls = cast(
             Type[_T],
-            patch_init_method(cast(Type[Dataclass], cls_), warnings),
+            patch_init_method(
+                cast(Type[Dataclass], cls_),
+                warnings,
+                warn_on_default,
+            ),
         )
 
         return new_cls
