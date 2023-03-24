@@ -1,6 +1,6 @@
 # warned-dataclasses
 
-[![pypi](https://img.shields.io/pypi/v/warned-dataclasses)](https://pypi.org/project/warned-dataclasses) ![codecov](https://img.shields.io/codecov/c/github/lru-dev/warned-dataclasses)
+[![pypi](https://img.shields.io/pypi/v/warned-dataclasses)](https://pypi.org/project/warned-dataclasses) [![codecov](https://img.shields.io/codecov/c/github/lru-dev/warned-dataclasses)](https://app.codecov.io/gh/lru-dev/warned-dataclasses)
 
 This package adds functionality to Python's `dataclasses` feature to 
 emit a warning or raise an exception if an explicit value for an 
