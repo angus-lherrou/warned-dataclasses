@@ -19,6 +19,10 @@ from typing_extensions import TypeAlias
 CONDITION_CLASS: TypeAlias = str
 
 
+class ConditionalParameterWarning(UserWarning):
+    pass
+
+
 class ConditionalParameterError(Exception):
     pass
 

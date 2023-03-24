@@ -14,15 +14,17 @@
 
 import functools
 import inspect
-import logging
+import warnings
 from dataclasses import Field
 from typing import Protocol, ClassVar, Dict, Type, get_type_hints, cast, Set, Tuple
 
 from typing_extensions import TypeAlias, Annotated as Warned
 
-from .common import CONDITION_CLASS, ConditionalParameterError
-
-logger = logging.getLogger(__name__)
+from .common import (
+    CONDITION_CLASS,
+    ConditionalParameterError,
+    ConditionalParameterWarning,
+)
 
 
 class DeferredWarning:
@@ -49,7 +51,7 @@ class DeferredWarning:
             if self.error:
                 raise ConditionalParameterError(self.message)
             else:
-                logger.warning(self.message)
+                warnings.warn(self.message, ConditionalParameterWarning)
 
 
 AnnotatedAlias: TypeAlias = type(Warned[None, None])  # type: ignore
