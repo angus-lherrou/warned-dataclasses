@@ -12,33 +12,36 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys
-
 from collections import defaultdict
 from dataclasses import is_dataclass
 from typing import (
     Callable,
-    overload,
-    Union,
-    Optional,
-    TypeVar,
-    List,
+    Dict,
     Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
 )
 
 from ._internals import (
-    _collect_warnings,
-    _collect_conditions,
+    AnnotatedAlias,
+    ConditionalParameterError,
+    Dataclass,
+    DeferredWarningFactory,
+    WarnedDataclass,
     _collect_all_warnings,
+    _collect_conditions,
+    _collect_warnings,
     _satisfy,
+    patch_init_method,
 )
-
-if sys.version_info >= (3, 9):
-    pass
-else:
-    pass
-
-from ._internals import *
+from .common import CONDITION_CLASS
 
 _T = TypeVar("_T")
 

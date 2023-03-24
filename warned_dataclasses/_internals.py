@@ -15,10 +15,11 @@
 import functools
 import inspect
 import warnings
-from dataclasses import Field, MISSING
-from typing import Protocol, ClassVar, Dict, Type, get_type_hints, cast, Set, Tuple
+from dataclasses import MISSING, Field
+from typing import ClassVar, Dict, Protocol, Set, Tuple, Type, cast, get_type_hints
 
-from typing_extensions import TypeAlias, Annotated as Warned
+from typing_extensions import Annotated as Warned
+from typing_extensions import TypeAlias
 
 from .common import (
     CONDITION_CLASS,

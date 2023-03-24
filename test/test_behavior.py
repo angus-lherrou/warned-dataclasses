@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import io
+
 import warnings
 from dataclasses import dataclass, field
 from typing import Annotated
@@ -177,10 +177,10 @@ def test_condition_set_error_on_not_present_in_any_functional():
     es2 = ErrorSatisfy2(not_warned="abc")
     conditions = ConditionSet(es, es2)
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError):
         satisfy(conditions, "nonexistent")
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError):
         warn_for_condition(conditions, "nonexistent2")
 
 
@@ -355,7 +355,7 @@ def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwa
     condition, attr_name, default = condition_attr_default
     enwod = ErrorNoWarnOnDefault(3, **{attr_name: default})
     if len(recwarn) == 1:
-        assert attr_name == 'dflt_fac'
+        assert attr_name == "dflt_fac"
         w = recwarn.pop(UserWarning)
         if isinstance(w.message, UserWarning):
             msg = w.message.args[0]
@@ -363,8 +363,7 @@ def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwa
             msg = w
         assert "pure function" in msg
     elif len(recwarn) == 0:
-        assert attr_name == 'dflt'
+        assert attr_name == "dflt"
     else:
         assert False, "too many warnings emitted"
     warn_for_condition(enwod, condition)
-
