@@ -10,8 +10,6 @@ jobs:
     - uses: actions/checkout@v1
     - name: Install dev requirements
       run: pip install -r dev-requirements.txt
-    - name: Install pytest-cov
-      run: pip install pytest-cov
     - name: Install package
       run: pip install .
     - name: Run tests and collect coverage

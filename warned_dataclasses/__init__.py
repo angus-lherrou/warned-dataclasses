@@ -13,12 +13,14 @@
 #  limitations under the License.
 
 from typing_extensions import Annotated as Warned
-from .main import warned, warn_for_condition, warn_all, ConditionSet, satisfy
-from .common import ConditionalParameterError
+
+from .common import ConditionalParameterError, ConditionalParameterWarning
+from .main import ConditionSet, satisfy, warn_all, warn_for_condition, warned
 
 __all__ = [
     "ConditionSet",
     "ConditionalParameterError",
+    "ConditionalParameterWarning",
     "Warned",
     "warn_all",
     "warn_for_condition",

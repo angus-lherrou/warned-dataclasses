@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 from typing import List
-from typing_extensions import TypeAlias
 
+from typing_extensions import TypeAlias
 
 CONDITION_CLASS: TypeAlias = str
 

@@ -140,7 +140,12 @@ if __name__ == '__main__':
 * By default, a warned dataclass will only emit a warning once for each
   condition; future calls to `warn_for_condition` or `warn_all` will
   treat that condition as satisfied. To disable this behavior and emit
-  a warning every time it is invoked, use `@warned(satisfy_on_warn=False)`
+  a warning every time it is invoked, use `@warned(satisfy_on_warn=False)`.
+
+* By default, a warned dataclass will emit a warning if a value equal to
+  the default value for a field is passed explicitly. Sometimes this is
+  undesirable, and explicitly-passed default values should be ignored. To
+  disable warnings for explicit default values, use `@warned(warn_on_default=False)`.
 
 * A plain `@warned` can be used with or without parentheses.
 

@@ -15,10 +15,11 @@
 import functools
 import inspect
 import warnings
-from dataclasses import Field
-from typing import Protocol, ClassVar, Dict, Type, get_type_hints, cast, Set, Tuple
+from dataclasses import MISSING, Field
+from typing import ClassVar, Dict, Protocol, Set, Tuple, Type, cast, get_type_hints
 
-from typing_extensions import TypeAlias, Annotated as Warned
+from typing_extensions import Annotated as Warned
+from typing_extensions import TypeAlias
 
 from .common import (
     CONDITION_CLASS,
@@ -89,16 +90,13 @@ class WarnedDataclass(Protocol):
 
 def patch_init_method(
     cls,
-    warnings: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
+    warning_dict: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
+    warn_on_default: bool,
 ) -> Type[WarnedDataclass]:
-    # cls = cast(Type[_WarnedDataclass], cls)
-    # cls.__inner_init__ = cls.__init__  # type: ignore
-
     @functools.wraps(cls, updated=())
     class WarnedClass(cls):  # type: ignore
         def __init__(self, *args, **kwargs):
             super(WarnedClass, self).__init__(*args, **kwargs)
-
             type_hints = get_type_hints(self, include_extras=True)
 
             bound_arguments = inspect.signature(super(WarnedClass, self).__init__).bind(
@@ -107,18 +105,44 @@ def patch_init_method(
 
             self.__deferred_warnings__ = {
                 cond: {name: factory.generate() for name, factory in factories.items()}
-                for cond, factories in warnings.items()
+                for cond, factories in warning_dict.items()
             }
 
             # satisfy warnings for implicit attributes
             for name, field_obj in self.__dataclass_fields__.items():
                 if not field_obj.init:
-                    # not an init parameter; ignore
+                    # not an init parameter; leave warning in-place
                     continue
 
                 if name in bound_arguments.arguments:
-                    # explicit value was passed; leave unsatisfied
-                    continue
+                    # explicit value was passed
+                    if warn_on_default:
+                        # warn on any explicit value, including equal to default
+                        continue
+                    else:
+                        if field_obj.default is field_obj.default_factory is MISSING:
+                            # no default set; unlikely use case but should
+                            # account for it; leave warning in place
+                            continue
+                        elif (
+                            MISSING
+                            is not field_obj.default
+                            != bound_arguments.arguments[name]
+                        ):
+                            # non-default value was passed; warn
+                            continue
+                        elif field_obj.default_factory is not MISSING:
+                            # default_factory set and value was passed
+                            warnings.warn(
+                                f"default_factory was overridden for {name}. Assuming "
+                                f"{field_obj.default_factory} is a pure function that "
+                                f"returns a value with a reasonable __eq__."
+                            )
+                            default_value = field_obj.default_factory()
+                            if default_value != bound_arguments.arguments[name]:
+                                # non-default value was passed; warn
+                                continue
+                        # else: default value was passed
 
                 if not isinstance(type_hints[name], AnnotatedAlias):
                     # not Annotated; ignore

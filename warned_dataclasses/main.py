@@ -12,33 +12,36 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sys
-
 from collections import defaultdict
 from dataclasses import is_dataclass
 from typing import (
     Callable,
-    overload,
-    Union,
-    Optional,
-    TypeVar,
-    List,
+    Dict,
     Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
 )
 
 from ._internals import (
-    _collect_warnings,
-    _collect_conditions,
+    AnnotatedAlias,
+    ConditionalParameterError,
+    Dataclass,
+    DeferredWarningFactory,
+    WarnedDataclass,
     _collect_all_warnings,
+    _collect_conditions,
+    _collect_warnings,
     _satisfy,
+    patch_init_method,
 )
-
-if sys.version_info >= (3, 9):
-    pass
-else:
-    pass
-
-from ._internals import *
+from .common import CONDITION_CLASS
 
 _T = TypeVar("_T")
 
@@ -98,6 +101,7 @@ def warned(
     *,
     error: bool = False,
     satisfy_on_warn: bool = True,
+    warn_on_default: bool = True,
 ) -> Callable[[Type[_T]], Type[_T]]:
     ...
 
@@ -108,6 +112,7 @@ def warned(
     *,
     error: bool = False,
     satisfy_on_warn: bool = True,
+    warn_on_default: bool = True,
 ) -> Union[Type[_T], Callable[[Type[_T]], Type[_T]]]:
     def generate_warnings(cls_: Type[_T]) -> Type[_T]:
         if not is_dataclass(cls_):
@@ -142,7 +147,11 @@ def warned(
 
         new_cls = cast(
             Type[_T],
-            patch_init_method(cast(Type[Dataclass], cls_), warnings),
+            patch_init_method(
+                cast(Type[Dataclass], cls_),
+                warnings,
+                warn_on_default,
+            ),
         )
 
         return new_cls
