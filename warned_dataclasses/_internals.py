@@ -16,7 +16,18 @@ import functools
 import inspect
 import warnings
 from dataclasses import MISSING, Field
-from typing import ClassVar, Dict, Protocol, Set, Tuple, Type, cast, get_type_hints
+from types import GenericAlias
+from typing import (
+    ClassVar,
+    Dict,
+    Protocol,
+    Set,
+    Tuple,
+    Type,
+    cast,
+    get_type_hints,
+    List,
+)
 
 from typing_extensions import Annotated as Warned
 from typing_extensions import TypeAlias
@@ -85,27 +96,70 @@ class Dataclass(Protocol):
 class WarnedDataclass(Protocol):
     __dataclass_fields__: ClassVar[Dict[str, Field]]
     __dataclass_params__: ClassVar
+    __warning_factories__: ClassVar[
+        Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]]
+    ]
     __deferred_warnings__: Dict[CONDITION_CLASS, Dict[str, DeferredWarning]]
+
+
+def is_warned_dataclass(obj):
+    """Returns True if obj is a warned dataclass or an instance of a
+    dataclass."""
+    cls = (
+        obj
+        if isinstance(obj, type) and not isinstance(obj, GenericAlias)
+        else type(obj)
+    )
+    return hasattr(cls, "__warning_factories__")
+
+
+def undupe_mro(mro: List[Type]):
+    unduped_mro = [mro[0]]
+
+    for i in range(1, len(mro)):
+        prev_cls = mro[i - 1]
+        curr_cls = mro[i]
+
+        if (
+            prev_cls.__name__ == "WarnedClass" or prev_cls.__name__ == curr_cls.__name__
+        ) and hasattr(prev_cls, "__warning_factories__"):
+            # classes with same name, lower one has __warning_factories__;
+            # therefore upper one is the unpatched class; remove from MRO
+            continue
+        unduped_mro.append(curr_cls)
+    return tuple(unduped_mro)
 
 
 def patch_init_method(
     cls,
-    warning_dict: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
+    warning_factories: Dict[CONDITION_CLASS, Dict[str, DeferredWarningFactory]],
     warn_on_default: bool,
 ) -> Type[WarnedDataclass]:
     @functools.wraps(cls, updated=())
     class WarnedClass(cls):  # type: ignore
+        __warning_factories__: Dict[
+            CONDITION_CLASS, Dict[str, DeferredWarningFactory]
+        ] = warning_factories
+
+        # @functools.wraps(cls.__init__)
         def __init__(self, *args, **kwargs):
             super(WarnedClass, self).__init__(*args, **kwargs)
-            type_hints = get_type_hints(self, include_extras=True)
+            type_hints = get_type_hints(type(self), include_extras=True)
 
             bound_arguments = inspect.signature(super(WarnedClass, self).__init__).bind(
                 *args, **kwargs
             )
 
+            all_warning_factories = [
+                cls_.__warning_factories__
+                for cls_ in undupe_mro(type(self).mro())
+                if is_warned_dataclass(cls_)
+            ]
+
             self.__deferred_warnings__ = {
                 cond: {name: factory.generate() for name, factory in factories.items()}
-                for cond, factories in warning_dict.items()
+                for wfs in all_warning_factories
+                for cond, factories in wfs.items()
             }
 
             # satisfy warnings for implicit attributes

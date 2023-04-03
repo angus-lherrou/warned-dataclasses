@@ -84,6 +84,101 @@ class ErrorNoWarnOnDefault:
     dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
+@dataclass
+class UnwarnedSuperclass:
+    not_warned: int = field(default=4)
+
+
+@warned(error=False)
+@dataclass
+class WarnedWarningMidclass(UnwarnedSuperclass):
+    dflt: Warned[int, "dflt"] = field(default=5)
+
+
+@warned(error=False)
+@dataclass
+class WarnedWarningSubclass(WarnedWarningMidclass):
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+
+
+@warned(error=True)
+@dataclass
+class WarnedConvErrorSubclass(WarnedWarningMidclass):
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+
+
+@warned(error=True)
+@dataclass
+class WarnedErrorMidclass(UnwarnedSuperclass):
+    dflt: Warned[int, "dflt"] = field(default=5)
+
+
+@warned(error=True)
+@dataclass
+class WarnedErrorSubclass(WarnedErrorMidclass):
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+
+
+@warned(error=False)
+@dataclass
+class WarnedConvWarningSubclass(WarnedErrorMidclass):
+    dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
+
+
+def test_midclass_error():
+    wem = WarnedErrorMidclass(dflt=6)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(wem, "dflt")
+
+
+def test_midclass_warning():
+    wwm = WarnedWarningMidclass(dflt=6)
+    with pytest.warns(ConditionalParameterWarning):
+        warn_for_condition(wwm, "dflt")
+
+
+def test_subclass_converted_error():
+    wces = WarnedConvErrorSubclass(dflt=6, dflt_fac=11)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(wces, "dflt_fac")
+
+
+@pytest.mark.xfail
+def test_subclass_convert_prev_to_error():
+    wces = WarnedConvErrorSubclass(dflt=6)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(wces, "dflt")
+
+
+def test_subclass_converted_warning():
+    wcws = WarnedConvWarningSubclass(dflt=6, dflt_fac=11)
+    with pytest.warns(ConditionalParameterWarning):
+        warn_for_condition(wcws, "dflt_fac")
+
+
+@pytest.mark.xfail
+def test_subclass_convert_prev_to_warning():
+    wcws = WarnedConvWarningSubclass(dflt=6)
+    with pytest.warns(ConditionalParameterWarning):
+        warn_for_condition(wcws, "dflt")
+
+
+def test_subclass_error_both_work():
+    wes = WarnedErrorSubclass(dflt=6, dflt_fac=11)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(wes, "dflt")
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(wes, "dflt_fac")
+
+
+def test_subclass_warning_both_work():
+    wws = WarnedWarningSubclass(dflt=6, dflt_fac=11)
+    with pytest.warns(ConditionalParameterWarning):
+        warn_for_condition(wws, "dflt")
+    with pytest.warns(ConditionalParameterWarning):
+        warn_for_condition(wws, "dflt_fac")
+
+
 def test_no_parens():
     @warned
     @dataclass
@@ -412,7 +507,9 @@ def test_error_on_incorrect_condition_name_satisfy():
 
 def test_error_on_warned_non_dataclass():
     with pytest.raises(ValueError) as ve:
+
         @warned
         class NonDataclass:
             foo: Warned[int, "foo"]
+
     assert ve.value.args[0] == "@warned should only be used with a dataclass."

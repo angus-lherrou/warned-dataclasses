@@ -120,7 +120,7 @@ def warned(
 
         cls_annotations = cls_.__annotations__
 
-        warnings: Dict[
+        warning_factories: Dict[
             CONDITION_CLASS, Dict[str, DeferredWarningFactory]
         ] = defaultdict(dict)
 
@@ -143,13 +143,13 @@ def warned(
                 error,
                 satisfy_on_warn,
             )
-            warnings[cond][name] = warning
+            warning_factories[cond][name] = warning
 
         new_cls = cast(
             Type[_T],
             patch_init_method(
                 cast(Type[Dataclass], cls_),
-                warnings,
+                warning_factories,
                 warn_on_default,
             ),
         )
