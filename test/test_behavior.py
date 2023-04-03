@@ -403,3 +403,17 @@ def test_fails_on_non_default():
     oe = OddsAndEnds(non_default=5)
     with pytest.raises(ConditionalParameterError):
         warn_for_condition(oe, "non_default")
+
+
+def test_error_on_incorrect_condition_name_warn():
+    ens = ErrorNoSatisfy()
+    with pytest.raises(ValueError) as ve:
+        warn_for_condition(ens, "notACondition")
+    assert ve.value.args[0][:40] == "Condition notACondition not present for "
+
+
+def test_error_on_incorrect_condition_name_satisfy():
+    ens = ErrorNoSatisfy()
+    with pytest.raises(ValueError) as ve:
+        satisfy(ens, "notACondition")
+    assert ve.value.args[0][:40] == "Condition notACondition not present for "
