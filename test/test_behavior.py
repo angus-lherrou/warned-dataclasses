@@ -377,7 +377,7 @@ def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwa
     warn_for_condition(enwod, condition)
 
 
-def test_fails_on_different_from_default_no_warn_on_default(condition_attr_default, recwarn):
+def test_fails_on_non_default_no_warn_on_default(condition_attr_default, recwarn):
     condition, attr_name, default = condition_attr_default
     enwod = ErrorNoWarnOnDefault(3, **{attr_name: default + 1})
     check_recwarn(recwarn, attr_name)
