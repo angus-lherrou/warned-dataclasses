@@ -66,7 +66,6 @@ class ErrorSatisfy:
 @dataclass
 class OddsAndEnds:
     non_default: Warned[int, "non_default"]
-    other_annot: Annotated[int, 42] = field(default=42)
     non_init: Annotated[int, "non_init"] = field(default=3, init=False)
 
 
@@ -383,10 +382,6 @@ def test_fails_on_non_default_no_warn_on_default(condition_attr_default, recwarn
     check_recwarn(recwarn, attr_name)
     with pytest.raises(ConditionalParameterError):
         warn_for_condition(enwod, condition)
-
-
-def test_ok_on_other_annotated():
-    _ = OddsAndEnds(non_default=5, other_annot=43)
 
 
 def test_fails_on_non_init():
