@@ -62,7 +62,7 @@ class ErrorSatisfy:
     dflt_fac: Warned[int, "dflt_fac"] = field(default_factory=lambda: 10)
 
 
-@warned(error=True)
+@warned(error=True, warn_on_default=False)
 @dataclass
 class OddsAndEnds:
     non_default: Warned[int, "non_default"]
