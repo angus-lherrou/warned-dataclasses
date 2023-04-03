@@ -111,7 +111,7 @@ def patch_init_method(
             # satisfy warnings for implicit attributes
             for name, field_obj in self.__dataclass_fields__.items():
                 if not field_obj.init:
-                    # not an init parameter; ignore
+                    # not an init parameter; leave warning in-place
                     continue
 
                 if name in bound_arguments.arguments:
