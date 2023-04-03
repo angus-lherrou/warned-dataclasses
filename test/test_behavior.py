@@ -360,18 +360,14 @@ def test_fails_on_equal_to_default(condition_attr_default):
 
 
 def check_recwarn(rw, attr_name):
+    assert len(rw) <= 1
     if len(rw) == 1:
         assert attr_name == "dflt_fac"
         w = rw.pop(UserWarning)
-        if isinstance(w.message, UserWarning):
-            msg = w.message.args[0]
-        else:
-            msg = w
+        msg = w.message.args[0]
         assert "pure function" in msg
-    elif len(rw) == 0:
+    else:  # len(rw) == 0
         assert attr_name == "dflt"
-    else:
-        assert False, "too many warnings emitted"
 
 
 def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwarn):
