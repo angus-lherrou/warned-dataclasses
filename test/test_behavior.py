@@ -64,6 +64,14 @@ class ErrorSatisfy:
 
 @warned(error=True)
 @dataclass
+class OddsAndEnds:
+    non_default: Warned[int, "non_default"]
+    other_annot: Annotated[int, 42] = field(default=42)
+    non_init: Annotated[int, "non_init"] = field(default=3, init=False)
+
+
+@warned(error=True)
+@dataclass
 class ErrorSatisfy2:
     not_warned: Warned[str, "not_warned"] = field(default="abcd1234")
     dflt: Warned[str, "dflt"] = field(default="sam I am")
@@ -351,19 +359,47 @@ def test_fails_on_equal_to_default(condition_attr_default):
         warn_for_condition(ens, condition)
 
 
-def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwarn):
-    condition, attr_name, default = condition_attr_default
-    enwod = ErrorNoWarnOnDefault(3, **{attr_name: default})
-    if len(recwarn) == 1:
+def check_recwarn(rw, attr_name):
+    if len(rw) == 1:
         assert attr_name == "dflt_fac"
-        w = recwarn.pop(UserWarning)
+        w = rw.pop(UserWarning)
         if isinstance(w.message, UserWarning):
             msg = w.message.args[0]
         else:
             msg = w
         assert "pure function" in msg
-    elif len(recwarn) == 0:
+    elif len(rw) == 0:
         assert attr_name == "dflt"
     else:
         assert False, "too many warnings emitted"
+
+
+def test_ok_on_equal_to_default_no_warn_on_default(condition_attr_default, recwarn):
+    condition, attr_name, default = condition_attr_default
+    enwod = ErrorNoWarnOnDefault(3, **{attr_name: default})
+    check_recwarn(recwarn, attr_name)
     warn_for_condition(enwod, condition)
+
+
+def test_fails_on_different_from_default_no_warn_on_default(condition_attr_default, recwarn):
+    condition, attr_name, default = condition_attr_default
+    enwod = ErrorNoWarnOnDefault(3, **{attr_name: default + 1})
+    check_recwarn(recwarn, attr_name)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(enwod, condition)
+
+
+def test_ok_on_other_annotated():
+    _ = OddsAndEnds(non_default=5, other_annot=43)
+
+
+def test_fails_on_non_init():
+    oe = OddsAndEnds(non_default=5)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(oe, "non_init")
+
+
+def test_fails_on_non_default():
+    oe = OddsAndEnds(non_default=5)
+    with pytest.raises(ConditionalParameterError):
+        warn_for_condition(oe, "non_default")
