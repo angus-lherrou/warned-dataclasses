@@ -408,3 +408,11 @@ def test_error_on_incorrect_condition_name_satisfy():
     with pytest.raises(ValueError) as ve:
         satisfy(ens, "notACondition")
     assert ve.value.args[0][:40] == "Condition notACondition not present for "
+
+
+def test_error_on_warned_non_dataclass():
+    with pytest.raises(ValueError) as ve:
+        @warned
+        class NonDataclass:
+            foo: Warned[int, "foo"]
+    assert ve.value.args[0] == "@warned should only be used with a dataclass."
