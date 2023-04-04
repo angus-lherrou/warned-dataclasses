@@ -16,21 +16,10 @@ import functools
 import inspect
 import warnings
 from dataclasses import MISSING, Field
-from types import GenericAlias
-from typing import (
-    ClassVar,
-    Dict,
-    Protocol,
-    Set,
-    Tuple,
-    Type,
-    cast,
-    get_type_hints,
-    List,
-)
+from typing import ClassVar, Dict, List, Set, Tuple, Type, cast
 
 from typing_extensions import Annotated as Warned
-from typing_extensions import TypeAlias
+from typing_extensions import Protocol, TypeAlias, get_type_hints
 
 from .common import (
     CONDITION_CLASS,
@@ -107,7 +96,7 @@ def is_warned_dataclass(obj):
     dataclass."""
     cls = (
         obj
-        if isinstance(obj, type) and not isinstance(obj, GenericAlias)
+        if isinstance(obj, type)
         else type(obj)
     )
     return hasattr(cls, "__warning_factories__")
