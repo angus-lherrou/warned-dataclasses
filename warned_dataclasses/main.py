@@ -91,7 +91,6 @@ class ConditionSet(Generic[_T]):
 @overload
 def warned(
     cls: Type[_T],
-    /,
 ) -> Type[_T]:
     ...
 
@@ -108,7 +107,6 @@ def warned(
 
 def warned(
     cls: Optional[Type[_T]] = None,
-    /,
     *,
     error: bool = False,
     satisfy_on_warn: bool = True,
