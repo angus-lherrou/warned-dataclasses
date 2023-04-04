@@ -8,7 +8,7 @@ readme = "README.md"
 authors = [
     { name = "Angus L'Herrou", email = "contact@lru.dev" }
 ]
-version = "0.5.0"
+version = "0.5.1"
 requires-python = ">=3.7"
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
